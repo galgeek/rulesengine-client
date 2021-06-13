@@ -3,7 +3,6 @@ from datetime import (
     timedelta,
 )
 from dateutil.parser import parse as parse_date
-import ipaddr
 from pytz import utc
 import re
 from warcio.timeutils import datetime_to_timestamp, timestamp_to_datetime
@@ -110,15 +109,13 @@ class Rule(object):
             enabled=response.get('enabled'),
             environment=response.get('environment'))
 
-    def applies(self, warc_name, client_ip, capture_date,
+    def applies(self, warc_name, capture_date,
                 retrieve_date=datetime.now(tz=utc), collection=None,
                 partner=None, protocol=None, server_side_filters=True):
         """Checks to see whether a rule applies given request and playback
         information.
 
         :param str warc_name: the name of the WARC file containing the capture.
-        :param client_ip: the client's IP address
-        :type client_ip: str or ipaddr.IPv[46]Address
         :param datetime capture_date: the date of the requested capture.
         :param str collection: the collection to which the capture belongs.
         :param str partner: the partner to which the capture belongs.
@@ -130,12 +127,10 @@ class Rule(object):
         """
         if server_side_filters:
             return (self.warc_match_applies(warc_name) and
-                    self.ip_range_applies(client_ip) and
                     self.protocol_applies(protocol) and
                     self.seconds_since_capture_applies(capture_date))
         return (
             self.enabled and
-            self.ip_range_applies(client_ip) and
             self.seconds_since_capture_applies(capture_date) and
             self.capture_date_applies(capture_date) and
             self.retrieve_date_applies(retrieve_date) and
@@ -298,7 +293,7 @@ class RuleCollection(object):
         """Sorts the rules on the surts."""
         self.rules.sort(key=lambda x: x.surt)
 
-    def filter_applicable_rules(self, warc_name, client_ip, capture_date=None,
+    def filter_applicable_rules(self, warc_name, capture_date=None,
                                 retrieve_date=datetime.now(tz=utc),
                                 collection=None, partner=None, protocol=None,
                                 server_side_filters=True):
@@ -309,9 +304,7 @@ class RuleCollection(object):
         the appropriate rules are included.
 
         :param str warc_name: the name of the WARC file containing the capture.
-        :param client_ip: the client's IP address
-        :type client_ip: str or ipaddr.IPv[46]Address
-        :param datetime capture_date: the date of the requested capture.
+        :param str capture_date: the date of the requested capture.
         :param str collection: the collection to which the capture belongs.
         :param str partner: the partner to which the capture belongs.
         :param bool server_side_filters: whether or not filters have already
@@ -320,7 +313,6 @@ class RuleCollection(object):
         """
         self.rules = [rule for rule in self.rules if rule.applies(
             warc_name,
-            client_ip,
             capture_date=capture_date,
             collection=collection,
             partner=partner,
